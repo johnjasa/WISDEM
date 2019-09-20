@@ -97,3 +97,11 @@ Thumbs.db
 # Visual Studio Code #
 ######################
 .vscode/
+
+# Ben's Stuff #
+#####################
+wisdem/rotorse/temp/
+*NUL
+*.bl
+*.swp
+*.swo

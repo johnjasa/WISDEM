@@ -4,7 +4,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 import numpy as np
 from scipy.interpolate import PchipInterpolator, Akima1DInterpolator, interp1d
-from rotorse.rotor_geometry_yaml import remap2grid, remapAirfoil, arc_length, rotate, ReferenceBlade
+from wisdem.rotorse.rotor_geometry_yaml import remap2grid, remapAirfoil, arc_length, rotate, ReferenceBlade
 
 def plot_spanwise_vars(blade, path, show_plots = True):
     
@@ -140,12 +140,12 @@ def arc2xy_section(arc, x, y, start_nd_arc, end_nd_arc, LE_idx, Naf, Nsec):
     idx_half_end   = find_half(end_nd_arc, arc, LE_idx, Naf)
 
     # No LE or Te crossing of composite section
-    if idx_half_start == idx_half_end:
-        section_x = remap2grid(arc[idx_half_start], x[idx_half_start], np.linspace(start_nd_arc, end_nd_arc, num = Nsec))#, spline=interp1d)
-        section_y = remap2grid(x[idx_half_start], y[idx_half_start], section_x)#, spline=interp1d)
+    # if idx_half_start == idx_half_end:
+    section_x = remap2grid(arc[idx_half_start], x[idx_half_start], np.linspace(start_nd_arc, end_nd_arc, num = Nsec))#, spline=interp1d)
+    section_y = remap2grid(x[idx_half_start], y[idx_half_start], section_x)#, spline=interp1d)
 
-    else:
-        print('LE / TE not yet implimented')
+    # else:
+    #     print('LE / TE not yet implimented')
 
     return section_x, section_y
 
@@ -180,7 +180,7 @@ def plot_lofted(blade, layer_vars, path, show_plots = True):
         profile_i = out['profile']['xy'][:,:,i]
         # if profile_i[0,1] != profile_i[-1,1]:
         #     profile_i = np.row_stack((profile_i, profile_i[0,:])) 
-        arc = arc_length(profile_i[:,0], profile_i[:,1], high_fidelity=True)
+        arc = arc_length(profile_i[:, 0], profile_i[:, 1])
         out['profile']['arc'].append(arc/arc[-1])
 
     # For each layer, get surface locations

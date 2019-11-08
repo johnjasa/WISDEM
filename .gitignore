@@ -105,3 +105,15 @@ wisdem/rotorse/temp/
 *.bl
 *.swp
 *.swo
+
+# Roland's Stuff #
+##################
+wisdem/rotorse/temp/
+wisdem/00_analysis/
+wisdem/rotorse/RotorSE_FAST_BAR_005a/
+wisdem/rotorse/DAC_Opt/
+wisdem/rotorse/turbine_inputs/archive/
+NUL
+*rotor_airfoil.py
+.idea/
+

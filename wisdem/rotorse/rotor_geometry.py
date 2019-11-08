@@ -15,7 +15,6 @@ from wisdem.rotorse.rotor_cost import blade_cost_model
 
 from scipy.interpolate import PchipInterpolator
 
-NINPUT = 5
 
 
 
@@ -38,13 +37,14 @@ class BladeGeometry(ExplicitComponent):
         NAF     = len(self.refBlade['outer_shape_bem']['airfoil_position']['grid'])
         NAFgrid = len(self.refBlade['airfoils_aoa'])
         NRe     = len(self.refBlade['airfoils_Re'])
-        
-        n_ctrl = 1
+        #NCtrl   = len(self.refBlade['airfoils_Ctrl'])
+        #print(self.refBlade['airfoils_Ctrl'])
+        n_ctrl = 1 # init use (adapt below if aerodynamic control is applied)
         # interpolate
         if 'aerodynamic_control' in self.refBlade:
             for afi in range(npts):
                 if 'coords' in self.refBlade['flap_profiles'][afi]:
-                    n_ctrl = max(n_ctrl, len(self.refBlade['flap_profiles'][afi]['flap_angles']))
+                    n_ctrl = max(n_ctrl, len(self.refBlade['flap_profiles'][afi]['flap_angles'])) # determine max number of flap control angles for all airfoils
 
                     
 
@@ -83,6 +83,8 @@ class BladeGeometry(ExplicitComponent):
         self.add_output('airfoils_cm',  val=np.zeros((NAFgrid, npts, NRe, n_ctrl)), desc='moment coefficients, spanwise')
         self.add_output('airfoils_aoa', val=np.zeros((NAFgrid)), units='deg', desc='angle of attack grid for polars')
         self.add_output('airfoils_Re',  val=np.zeros((NRe)), desc='Reynolds numbers of polars')
+        #self.add_output('airfoils_Ctrl', val=np.zeros((n_ctrl)), units='deg', desc='flap control')
+        self.add_output('airfoils_Ctrl', val=np.zeros((npts, n_ctrl)), units='deg', desc='flap control')
         
         # Airfoil coordinates
         self.add_output('airfoils_coord_x',  val=np.zeros((200, npts)), desc='x airfoil coordinate, spanwise')
@@ -176,9 +178,14 @@ class BladeGeometry(ExplicitComponent):
         if blade['analysis_level'] < 3:
             refBlade.spar_var   = blade['precomp']['spar_var']
             refBlade.te_var     = blade['precomp']['te_var']
-        
+
+
+
+        # assembly = copy.deepcopy(self.refBlade['assembly'])
+        # environment = copy.deepcopy(self.wt_ref['environment'])
+
         blade_out = refBlade.update(blade)
-        
+
         # Get geometric outputs
         outputs['hub_diameter'] = 2.0*Rhub
         outputs['r']            = Rhub + (Rtip-Rhub)*np.array(blade_out['pf']['s'])
@@ -198,9 +205,22 @@ class BladeGeometry(ExplicitComponent):
         outputs['airfoils_cm']  = blade_out['airfoils_cm']
         outputs['airfoils_aoa'] = blade_out['airfoils_aoa']
         outputs['airfoils_Re']  = blade_out['airfoils_Re']
-        
-        
-        
+      #  outputs['airfoils_Ctrl'] = print(blade_out['flap_profiles'])   ['te_flaps']
+      #  for k in range(len(blade['aerodynamic_control']['te_flaps'])):  # for multiple flaps specified in yaml file
+      #      if (blade['pf']['r'][i] / blade['pf']['r'][-1]) >= blade['aerodynamic_control']['te_flaps'][k]['span_start'] and (blade['pf']['r'][i] / blade['pf']['r'][-1]) <= blade['aerodynamic_control']['te_flaps'][k]['span_end']:  # Only create flap geometries where the yaml file specifies there is a flap (Currently going to nearest blade station location)
+      #          for ind, fa in enumerate(flap_angles):  # For each of the flap angles
+      #              outputs['airfoils_Ctrl'][]
+
+        #outputs['airfoils_Ctrl'] = blade_out['airfoils_Ctrl'][:,0,:]
+
+# --------------------------------------
+        for j in range(len(blade_out['airfoils_Ctrl'][:,0,0])): # evaluate for range of radial stations
+            outputs['airfoils_Ctrl'][j,:] = blade_out['airfoils_Ctrl'][j,0,:]
+
+
+        #outputs['airfoils_Ctrl']  = blade_out['airfoils_Ctrl']['aerodynamic_control']['te_flaps']['i']['delta_max_neg']
+        #print(blade_out['airfoils_Ctrl']['aerodynamic_control'])
+
         upperCS   = blade_out['precomp']['upperCS']
         lowerCS   = blade_out['precomp']['lowerCS']
         websCS    = blade_out['precomp']['websCS']
@@ -210,6 +230,7 @@ class BladeGeometry(ExplicitComponent):
         for i in range(len(profile)):
             outputs['airfoils_coord_x'][:,i] = blade_out['profile'][:,0,i]
             outputs['airfoils_coord_y'][:,i] = blade_out['profile'][:,1,i]
+
         
         # Assumptions:
         # - if the composite layer is divided into multiple regions (i.e. if the spar cap is split into 3 regions due to the web locations),

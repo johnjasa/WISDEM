@@ -102,7 +102,7 @@ properties:
                             te_flaps:
                                 - span_start:
                                     type: number
-                                    description: Spanwise starting location of flap (r/R)
+                                    description: Spanwise starting location of flap (r/R) # in blade coord system with r/R = zero when the actual blade starts (i.e. excluding hub diameter)
                                     minimum: 0
                                     maximum: 1
                                   span_end:

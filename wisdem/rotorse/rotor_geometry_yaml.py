@@ -17,6 +17,7 @@ from wisdem.rotorse.precomp import Profile, Orthotropic2DMaterial, CompositeSect
 from wisdem.rotorse.geometry_tools.geometry import AirfoilShape, Curve
 
 # import matplotlib.pyplot as plt
+from scipy.ndimage import gaussian_filter
 
 def remap2grid(x_ref, y_ref, x, spline=PchipInterpolator):
 
@@ -117,6 +118,24 @@ def trailing_edge_smoothing(data):
 
     return data
 
+def smoothListGaussian(list, degree=5):
+    import numpy
+    window = degree*2-1
+    weight = numpy.array([1.0]*window)
+    weightGauss = []
+    for i in range(window):
+        i = i-degree+1
+        frac = i/float(window)
+        gauss = 1/(numpy.exp((4*(frac))**2))
+        weightGauss.append(gauss)
+    weight = numpy.array(weightGauss)*weight
+    smoothed = [0.0]*(len(list)-window)
+    for i in range(len(smoothed)):
+        smoothed[i] = sum(numpy.array(list[i:i+window])*weight)/sum(weight)
+    return smoothed
+
+
+
 class ReferenceBlade(object):
     def __init__(self):
 
@@ -160,10 +179,14 @@ class ReferenceBlade(object):
             if afi['name'] in blade['outer_shape_bem']['airfoil_position']['labels']:
                 af_ref[afi['name']] = afi
 
+        # build environment
+        blade['assembly'] = copy.deepcopy(self.wt_ref['assembly'])
+        blade['environment'] = copy.deepcopy(self.wt_ref['environment'])
+
         blade = self.set_configuration(blade, self.wt_ref)
         blade = self.remap_composites(blade)
         blade = self.remap_planform(blade, af_ref)
-        blade = self.remap_profiles(blade, af_ref, xfoil_path = self.xfoil_path)
+        blade = self.remap_profiles(blade, af_ref, xfoil_path = self.xfoil_path) # run xfoil at given flap angles
         blade = self.remap_polars(blade, af_ref)
         blade = self.calc_composite_bounds(blade)
         blade = self.calc_control_points(blade, self.r_in)
@@ -352,7 +375,7 @@ class ReferenceBlade(object):
         wt_out['components']['blade']['internal_structure_2d_fem']['reference_axis']['z']['grid']    = blade_out['pf']['s'].tolist()
 
 
-        ## configuration varaibles
+        ## configuration variables
         for var in wt_out['assembly']['control']:
             if type(blade_out['config'][var]) in [np.float, np.float64, np.float32]:
                 wt_out['assembly']['control'][var] = float(blade_out['config'][var])
@@ -619,8 +642,6 @@ class ReferenceBlade(object):
 
             # Use CCAirfoil.af_flap_coords() (which calls Xfoil) to create AF coordinates with flaps at angles specified in yaml input file
 
-
-
             if 'aerodynamic_control' in blade: # Checks if this section is included in yaml file
 
                 blade['flap_profiles'].append({}) # Start appending new dictionary items
@@ -631,18 +652,24 @@ class ReferenceBlade(object):
                         blade['flap_profiles'][i]['coords']=np.zeros((len(blade['profile'][:,0,0]),len(blade['profile'][0,:,0]),blade['aerodynamic_control']['te_flaps'][k]['num_delta'])) # initialize to zeros
                         flap_angles = np.linspace(blade['aerodynamic_control']['te_flaps'][k]['delta_max_neg'],blade['aerodynamic_control']['te_flaps'][k]['delta_max_pos'],blade['aerodynamic_control']['te_flaps'][k]['num_delta']) # bem:I am not going to force it to include delta=0.  If this is needed, a more complicated way of getting flap deflections to calculate is needed.
                         for ind, fa in enumerate(flap_angles): # For each of the flap angles
+                            # NOTE: negative flap angles are deflected to the suction side, i.e. positively along the positive z- (radial) axis
                             af_flap = CCAirfoil(np.array([1,2,3]), np.array([100]), np.zeros(3), np.zeros(3), np.zeros(3), blade['profile'][:,0,i],blade['profile'][:,1,i], "Profile"+str(i)) # bem:I am creating an airfoil name based on index...this structure/naming convention is being assumed in CCAirfoil.runXfoil() via the naming convention used in CCAirfoil.af_flap_coords(). Note that all of the inputs besides profile coordinates and name are just dummy varaiables at this point.
                             af_flap.af_flap_coords(xfoil_path, fa,  blade['aerodynamic_control']['te_flaps'][k]['chord_start'],0.5,200) #bem: the last number is the number of points in the profile.  It is currently being hard coded at 200 but should be changed to make sure it is the same number of points as the other profiles
-                            blade['flap_profiles'][i]['coords'][:,0,ind] = af_flap.af_flap_xcoords # x-coords from xfoil file with flaps
-                            blade['flap_profiles'][i]['coords'][:,1,ind] = af_flap.af_flap_ycoords # y-coords from xfoil file with flaps
+                            # blade['flap_profiles'][i]['coords'][:,0,ind] = af_flap.af_flap_xcoords # x-coords from xfoil file with flaps
+                            # blade['flap_profiles'][i]['coords'][:,1,ind] = af_flap.af_flap_ycoords # y-coords from xfoil file with flaps
+                            blade['flap_profiles'][i]['coords'][:,0,ind] = gaussian_filter(af_flap.af_flap_xcoords, sigma=1) # x-coords from xfoil file with flaps and gaussian filter for smoothing
+                            blade['flap_profiles'][i]['coords'][:,1,ind] = gaussian_filter(af_flap.af_flap_ycoords, sigma=1) # y-coords from xfoil file with flaps and gaussian filter for smoothing
+
                             blade['flap_profiles'][i]['flap_angles'].append([])
                             blade['flap_profiles'][i]['flap_angles'][ind] = fa # Putting in flap angles to blade for each profile (can be used for debugging later)
                         # ** The code below will plot the first three flap deflection profiles (in the case where there are only 3 this will correspond to max negative, zero, and max positive deflection cases)
-                        #import matplotlib.pyplot as plt
-                        #plt.plot(blade['flap_profiles'][i]['coords'][:,0,0], blade['flap_profiles'][i]['coords'][:,1,0], 'k',blade['flap_profiles'][i]['coords'][:,0,1], blade['flap_profiles'][i]['coords'][:,1,1], 'k',blade['flap_profiles'][i]['coords'][:,0,2], blade['flap_profiles'][i]['coords'][:,1,2], 'k')
-                        #plt.axis('equal')
-                        #plt.title(i)
-                        #plt.show()
+                        # import matplotlib.pyplot as plt
+                        # plt.plot(blade['flap_profiles'][i]['coords'][:,0,0], blade['flap_profiles'][i]['coords'][:,1,0], 'k',blade['flap_profiles'][i]['coords'][:,0,1], blade['flap_profiles'][i]['coords'][:,1,1], 'k',blade['flap_profiles'][i]['coords'][:,0,2], blade['flap_profiles'][i]['coords'][:,1,2], 'k')
+                        # plt.axis('equal')
+                        # plt.title(i)
+                        # plt.show()
+
+
 
             # import matplotlib.pyplot as plt
             # plt.plot(temp[:,0,i], temp[:,1,i], 'b')
@@ -677,6 +704,7 @@ class ReferenceBlade(object):
         n_span    = self.NPTS
 
         Re   = sorted(list(set(np.concatenate([[polar['re'] for polar in AFref[afi]['polars']] for afi in AFref]))))
+        # Re   = list(set(np.concatenate([[polar['re'] for polar in AFref[afi]['polars']] for afi in AFref])))  # not sorting in order to only determine airfoil specific polar tables with default Re
         n_Re = len(Re)
 
         cl_ref = np.zeros((n_aoa, n_af_ref, n_Re))
@@ -736,6 +764,7 @@ class ReferenceBlade(object):
         cl = np.zeros((n_aoa, n_span, n_Re, n_ctrl))
         cd = np.zeros((n_aoa, n_span, n_Re, n_ctrl))
         cm = np.zeros((n_aoa, n_span, n_Re, n_ctrl))
+        fa_control = np.zeros((n_span, n_Re, n_ctrl))
         for j in range(n_Re):
             spline_cl = spline(thk_afref, cl_ref[:,:,j], axis=1)
             spline_cd = spline(thk_afref, cd_ref[:,:,j], axis=1)
@@ -747,22 +776,37 @@ class ReferenceBlade(object):
         from wisdem.ccblade.Polar import Polar
 
         if 'aerodynamic_control' in blade:
-            for afi in range(n_span):
-                if 'coords' in blade['flap_profiles'][afi]:
-                    for j in range(n_Re):
+            for afi in range(n_span): # iterate number of radial stations for various airfoil tables
+                if 'coords' in blade['flap_profiles'][afi]: # check if 'coords' is an element of 'flap_profiles', i.e. if we have various flap angles
+                    for j in range(n_Re): # ToDo incorporade variable Re capability
                         for ind in range(n_ctrl):
-                            fa = blade['flap_profiles'][afi]['flap_angles'][ind]
-                            eta = (blade['pf']['r'][afi]/blade['pf']['r'][-1])
-                            #eta = blade['outer_shape_bem']['chord']['grid'][afi]
-                            print('Run xfoil for span section at ' + str(eta*100.) + '%, flap deflection ' + str(fa) + ' deg, and Re equal to ' + str(Re[j]))
-                            data = self.runXfoil(blade['flap_profiles'][afi]['coords'][:,0,ind], blade['flap_profiles'][afi]['coords'][:,1,ind], Re[j])
+                            #fa = blade['flap_profiles'][afi]['flap_angles'][ind] # value of respective flap angle
+                            fa_control[afi,j,ind] = blade['flap_profiles'][afi]['flap_angles'][ind] # flap angle vector of distributed aerodynamics control
+                            # eta = (blade['pf']['r'][afi]/blade['pf']['r'][-1])
+                            # eta = blade['outer_shape_bem']['chord']['grid'][afi]
+                            c   = blade['pf']['chord'][afi]  # blade chord length at cross section
+                            R   = blade['pf']['r'][-1]  # blade (global) radial length
+                            rR  = (blade['pf']['r'][afi]/blade['pf']['r'][-1])  # non-dimensional blade radial station at cross section
+                            tsr = blade['config']['tsr']  # tip-speed ratio
+                            # maxTS = self.wt_ref['assembly']['control']['maxTS']  # max blade-tip speed (m/s) from yaml file
+                            # KinVisc = self.wt_ref['environment']['air_data']['KinVisc']  # Kinematic viscosity (m^2/s) from yaml file
+                            # SpdSound = self.wt_ref['environment']['air_data']['SpdSound'] # speed of sound (m/s) from yaml file
+                            maxTS = blade['assembly']['control']['maxTS']  # max blade-tip speed (m/s) from yaml file
+                            KinVisc = blade['environment']['air_data']['KinVisc']  # Kinematic viscosity (m^2/s) from yaml file
+                            SpdSound = blade['environment']['air_data']['SpdSound'] # speed of sound (m/s) from yaml file
+                            Re_loc = c*maxTS*rR/KinVisc
+                            Ma_loc = maxTS * rR / SpdSound
+
+                            # print('Run xfoil for span section at ' + str(eta*100.) + '%, flap deflection ' + str(fa) + ' deg, and Re equal to ' + str(Re[j]))
+                            # print('Run xfoil for span section at ' + str(eta * 100.) + '%, flap deflection ' + str(fa_control[afi,j,ind]) + ' deg, and Re equal to ' + str(Re[j]))
+                            print('Run xfoil for span section at ' + str(rR * 100.) + '% with ' + str(fa_control[afi,j,ind]) + ' deg flap deflection angle; Re equal to ' + str(Re_loc) + '; Ma equal to ' + str(Ma_loc))
+                            data = self.runXfoil(blade['flap_profiles'][afi]['coords'][:,0,ind], blade['flap_profiles'][afi]['coords'][:,1,ind], Re_loc, -20., 25., 0.5, Ma_loc)
+                            # data = self.runXfoil(blade['flap_profiles'][afi]['coords'][:,0,ind], blade['flap_profiles'][afi]['coords'][:,1,ind], Re[j])
                             # data[data[:,0].argsort()] # To sort data by increasing aoa
                             # Apply corrections to airfoil polars
-                            oldpolar= Polar(Re[j], data[:,0],data[:,1],data[:,2],data[:,4]) # p[:,0] is alpha, p[:,1] is Cl, p[:,2] is Cd, p[:,4] is Cm
-                            c   = blade['pf']['chord'][afi]
-                            R   = blade['pf']['r'][-1]
-                            rR  = (blade['pf']['r'][afi]/blade['pf']['r'][-1])
-                            tsr = blade['config']['tsr']
+                            # oldpolar= Polar(Re[j], data[:,0],data[:,1],data[:,2],data[:,4]) # p[:,0] is alpha, p[:,1] is Cl, p[:,2] is Cd, p[:,4] is Cm
+                            oldpolar= Polar(Re_loc, data[:,0],data[:,1],data[:,2],data[:,4]) # p[:,0] is alpha, p[:,1] is Cl, p[:,2] is Cd, p[:,4] is Cm
+
 
                             polar3d = oldpolar.correction3D(rR,c/R,tsr) # Apply 3D corrections (made sure to change the r/R, c/R, and tsr values appropriately when calling AFcorrections())
                             cdmax   = 1.5
@@ -771,6 +815,7 @@ class ReferenceBlade(object):
                             cl[:,afi,j,ind] = np.interp(np.degrees(alpha), polar.alpha, polar.cl)
                             cd[:,afi,j,ind] = np.interp(np.degrees(alpha), polar.alpha, polar.cd)
                             cm[:,afi,j,ind] = np.interp(np.degrees(alpha), polar.alpha, polar.cm)
+
 
 
         alpha_out = np.degrees(alpha)
@@ -793,30 +838,40 @@ class ReferenceBlade(object):
         blade['airfoils_cm']  = cm
         blade['airfoils_aoa'] = alpha_out
         blade['airfoils_Re']  = Re
+        #blade['airfoils_Ctrl']  = fa
+        blade['airfoils_Ctrl']  = fa_control # use vector of flap angle controls
 
         return blade
 
 
-    def runXfoil(self, x, y, Re, AoA_min=-9, AoA_max=25, AoA_inc=0.5):
+    def runXfoil(self, x, y, Re, AoA_min=-9, AoA_max=25, AoA_inc=0.5, Ma = 0.0):
         #This function is used to create and run xfoil simulations for a given set of airfoil coordinates
 
         # Set initial parameters needed in xfoil
         LoadFlnmAF = "airfoil.txt" # This is a temporary file that will be deleted after it is no longer needed
         numNodes   = 260 # number of panels to use (260...but increases if needed)
-        dist_param = 0.15 # TE/LE panel density ratio (0.15)
-        IterLimit = 100 # Maximum number of iterations to try and get to convergence
-        panelBunch = 1.5 # Panel bunching parameter to bunch near larger changes in profile gradients (1.5)
-        rBunch = 0.15 # Region to LE bunching parameter (used to put additional panels near flap hinge) (0.15)
+        #dist_param = 0.15 # TE/LE panel density ratio (0.15)
+        dist_param = 0.12 #This is current value that i am trying to help with convergence (!bem)
+        #IterLimit = 100 # Maximum number of iterations to try and get to convergence
+        IterLimit = 10 #This decreased IterLimit will speed up analysis (!bem)
+        #panelBunch = 1.5 # Panel bunching parameter to bunch near larger changes in profile gradients (1.5)
+        panelBunch = 1.6 #This is the value I am currently using to try and improve convergence (!bem)
+        #rBunch = 0.15 # Region to LE bunching parameter (used to put additional panels near flap hinge) (0.15)
+        rBunch = 0.08 #This is the current value that I am using (!bem)
         XT1 = 0.55 # Defining left boundary of bunching region on top surface (should be before flap)
-        XT2 = 0.85 # Defining right boundary of bunching region on top surface (should be after flap)
+        #XT2 = 0.85 # Defining right boundary of bunching region on top surface (should be after flap)
+        XT2 = 0.9 #This is the value I am currently using (!bem)
         XB1 = 0.55 # Defining left boundary of bunching region on bottom surface (should be before flap)
-        XB2 = 0.85 # Defining right boundary of bunching region on bottom surface (should be after flap)
+        #XB2 = 0.85 # Defining right boundary of bunching region on bottom surface (should be after flap)
+        XB2 = 0.9 #This is the current value that I am using (!bem)
         saveFlnmPolar = "Polar.txt" # file name of outpur xfoil polar (can be useful to look at during debugging...can also delete at end if you don't want it stored)
         xfoilFlnm  = 'xfoil_input.txt' # Xfoil run script that will be deleted after it is no longer needed
         runFlag = 1 # Flag used in error handling
         dfdn = -0.5 # Change in angle of attack during initialization runs down to AoA_min
+        runNum = 0 # Initialized run number
+        dfnFlag = -10 # This flag is used to determine if xfoil needs to be re-run if the simulation fails due to convergence issues at low angles of attack
 
-        while numNodes < 450 and runFlag > 0:
+        while numNodes < 480 and runFlag > 0:
             # Cleaning up old files to prevent replacement issues
             if os.path.exists(saveFlnmPolar):
                 os.remove(saveFlnmPolar)
@@ -859,24 +914,34 @@ class ReferenceBlade(object):
             # Set Simulation parameters (Re and max number of iterations)
             fid.write("OPER\n")
             fid.write("VISC \n")
-            #fid.write( str(Re[0]) + "\n") # this sets Re to value specified in yaml file as an input
-            fid.write( "5000000 \n") # bem: I was having trouble geting convergence for some of the thinner airfoils at the tip for the large Re specified in the yaml, so I am hard coding in Re (5e6 is the highest I was able to get to using these paneling parameters)
+            fid.write( str(Re) + "\n") # this sets Re to value specified in yaml file as an input
+            #fid.write( "5000000 \n") # bem: I was having trouble geting convergence for some of the thinner airfoils at the tip for the large Re specified in the yaml, so I am hard coding in Re (5e6 is the highest I was able to get to using these paneling parameters)
+            fid.write("MACH\n")
+            fid.write(str(Ma)+" \n")
             fid.write("ITER \n")
             fid.write( str(IterLimit) + "\n")
 
             # Run simulations for range of AoA
-            fid.write("PACC\n\n\n") #Toggle saving polar on
-            fid.write("ASEQ 0 " + str(AoA_min) + " " + str(dfdn) + "\n") # The preliminary runs are just to get an initialize airfoil solution at min AoA so that the actual runs will not become unstable
 
-            fid.write("ASEQ " + str(AoA_min) + " " + "16" + " " + str(AoA_inc) + "\n") #run simulations for desired range of AoA using a coarse step size in AoA up to 16 deg
-            fid.write("ASEQ " + "16.5" + " " + str(AoA_max) + " " + "0.1" + "\n") #run simulations for desired range of AoA using a fine AoA increment up to final AoA to help with convergence issues at high Re
+            if dfnFlag > 0: # bem: This if statement is for the case when there are issues getting convergence at AoA_min.  It runs a preliminary set of AoA's down to AoA_min (does not save them)
+                for ii in range(int((0.0-AoA_min)/AoA_inc+1)):
+                    fid.write("ALFA "+ str(0.0-ii*float(AoA_inc)) +"\n")
+
+            fid.write("PACC\n\n\n") #Toggle saving polar on
+            #fid.write("ASEQ 0 " + str(AoA_min) + " " + str(dfdn) + "\n") # The preliminary runs are just to get an initialize airfoil solution at min AoA so that the actual runs will not become unstable
+
+            for ii in range(int((AoA_max-AoA_min)/AoA_inc+1)): # bem: run each AoA seperately (makes polar generation more convergence error tolerant)
+                fid.write("ALFA "+ str(AoA_min+ii*float(AoA_inc)) +"\n")
+
+            #fid.write("ASEQ " + str(AoA_min) + " " + "16" + " " + str(AoA_inc) + "\n") #run simulations for desired range of AoA using a coarse step size in AoA up to 16 deg
+            #fid.write("ASEQ " + "16.5" + " " + str(AoA_max) + " " + "0.1" + "\n") #run simulations for desired range of AoA using a fine AoA increment up to final AoA to help with convergence issues at high Re
             fid.write("PWRT\n") #Toggle saving polar off
             fid.write(saveFlnmPolar + " \n \n")
             fid.write("QUIT \n")
             fid.close()
 
             # Run the XFoil calling command
-            os.system(self.xfoil_path + " < xfoil_input.txt  > NUL")
+            os.system(self.xfoil_path + " < xfoil_input.txt  > NUL") # <<< runs XFoil !
             flap_polar = np.loadtxt(saveFlnmPolar,skiprows=12)
 
 
@@ -884,16 +949,21 @@ class ReferenceBlade(object):
             if flap_polar.size < 3: # This case is if there are convergence issues at the lowest angles of attack
                 plen = 0
                 a0 = 0
+                a1 = 0
                 dfdn = -0.25 # decrease AoA step size during initialization to try and get convergence in the next run
+                dfnFlag = 1 # Set flag to run initialization AoA down to AoA_min
                 print('XFOIL convergence issues')
             else:
-                plen=len(flap_polar[:,0]) # Number of AoA's in polar
-                a0=flap_polar[-1,0] # Maximum AoA in Polar
+                plen = len(flap_polar[:,0]) # Number of AoA's in polar
+                a0 = flap_polar[-1,0] # Maximum AoA in Polar
+                a1 = flap_polar[0,0] # Minimum AoA in Polar
+                dfnFlag = -10 # Set flag so that oyu don't need to run initialization sequence
 
-            if a0 > 19. and plen >= 40: # The a0 > 19 is to check to make sure polar entered into stall regiem plen >= 40 makes sure there are enough AoA's in polar for interpolation.
+            if a0 > 19. and plen >= 40 and a1 < -15.: # The a0 > 19 is to check to make sure polar entered into stall regiem plen >= 40 makes sure there are enough AoA's in polar for interpolation and a1 < -15 makes sure polar contains negative stall.
                 runFlag = -10 # No need ro re-run polar
             else:
                 numNodes += 50 # Re-run with additional panels
+                runNum += 1 # Update run number
                 print('Refining paneling')
 
         # Load back in polar data to be saved in instance variables
@@ -1106,7 +1176,7 @@ class ReferenceBlade(object):
                         if 'fixed' in blade['st'][type_sec][idx_sec]['rotation'].keys():
                             if blade['st'][type_sec][idx_sec]['rotation']['fixed'] == 'twist':
                                 blade['st'][type_sec][idx_sec]['rotation']['grid'] = blade['pf']['s']
-                                blade['st'][type_sec][idx_sec]['rotation']['values'] = np.radians(blade['pf']['theta'])
+                                blade['st'][type_sec][idx_sec]['rotation']['values'] = -np.radians(blade['pf']['theta'])
                             else:
                                 warning_invalid_fixed_rotation_reference = 'Invalid fixed reference given for layer = "%s" rotation. Currently supported options: "twist".'%(sec['name'])
                                 warnings.warn(warning_invalid_fixed_rotation_reference)

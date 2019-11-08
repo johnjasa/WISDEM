@@ -150,7 +150,7 @@ class RotorSE(Group):
                                                     'presweep', 'Rhub', 'Rtip', 'turbulence_class', 'turbine_class',
                                                     'V_R25', 'rho', 'mu', 'control_maxTS', 'control_maxOmega','hub_height',
                                                     'airfoils_cl','airfoils_cd','airfoils_cm','airfoils_aoa','airfoils_Re',
-                                                    'airfoils_coord_x','airfoils_coord_y','rthick'])
+                                                    'airfoils_Ctrl','airfoils_coord_x','airfoils_coord_y','rthick'])
 
             self.connect('rhoA',                'aeroelastic.beam:rhoA')
             self.connect('EIxx',                'aeroelastic.beam:EIxx')
@@ -277,22 +277,23 @@ if __name__ == '__main__':
 
     # Turbine Ontology input
     fname_schema  = "turbine_inputs/IEAontology_schema.yaml"
-    fname_input   = "turbine_inputs/BAR_200a_noRe.yaml"
+    fname_input   = "turbine_inputs/BAR208_noRe.yaml"
+    # fname_input   = "turbine_inputs/BAR007.yaml"
     output_folder = "test/"
-    # fname_output  = output_folder + 'test_out.yaml'
+    fname_output  = output_folder + 'YAML_out.yaml'
 
     Analysis_Level = 1 # 0: Run CCBlade; 1: Update FAST model at each iteration but do not run; 2: Run FAST w/ ElastoDyn; 3: (Not implemented) Run FAST w/ BeamDyn
 
     # Initialize blade design
     refBlade = ReferenceBlade()
     refBlade.verbose      = True
-    refBlade.NINPUT       = 8
+    refBlade.NINPUT       = 8 # no. of control points (def spline distribution; chord, twist, etc.)
     refBlade.NPTS         = 50
     refBlade.spar_var     = ['Spar_Cap_SS', 'Spar_Cap_PS'] # SS, then PS
     refBlade.te_var       = 'TE_reinforcement'
     refBlade.validate     = False
     refBlade.fname_schema = fname_schema
-    refBlade.xfoil_path   = "/home/mertzb/Xfoil/bin/xfoil"
+    refBlade.xfoil_path   = "/Users/rfeil/work/4_Xfoil/Xfoil.app/Contents/Resources/xfoil"   # provide executable as path
     blade = refBlade.initialize(fname_input)
 
     # Set FAST Inputs
@@ -300,29 +301,22 @@ if __name__ == '__main__':
         # File management
         FASTpref                        = {}
         FASTpref['Analysis_Level']      = Analysis_Level
-        FASTpref['FAST_ver']            = 'OpenFAST'
+        FASTpref['FAST_ver']            = 'openfast-distributed_aero_control'
         FASTpref['dev_branch']          = True
-        #FASTpref['FAST_exe']            = '/mnt/c/Material/Programs/openfast/build/glue-codes/openfast/openfast'
-        #FASTpref['FAST_directory']      = '/mnt/c/Material/Programs/wisdem_2_0/wisdem/rotorse/RotorSE_FAST_BAR_005a'   # Path to fst directory files
-        FASTpref['FAST_exe']            = '/home/mertzb/Documents/NREL_Codes/openfast_interp/openfast/build/glue-codes/fast/openfast'
-        FASTpref['FAST_directory']      = '/home/mertzb/Documents/NREL_Codes/WISDEM/wisdem/rotorse/RotorSE_FAST_BAR_005a'   # Path to fst directory files
-        FASTpref['FAST_InputFile']      = 'RotorSE_FAST_BAR_005a.fst' # FAST input file (ext=.fst)
-        # FASTpref['FAST_directory']      = 'C:/Users/egaertne/WT_Codes/models/openfast-dev/r-test/glue-codes/openfast/5MW_Land_DLL_WTurb'   # Path to fst directory files
-        # FASTpref['FAST_InputFile']      = '5MW_Land_DLL_WTurb.fst' # FAST input file (ext=.fst)
-        FASTpref['Turbsim_exe']         = "/home/mertzb/Documents/NREL_Codes/TurbSim/bin/TurbSim_glin64"
-        #FASTpref['Turbsim_exe']         = "/mnt/c/Material/Programs/TurbSim/TurbSim_glin64"
-        # FASTpref['FAST_exe']            = '/mnt/c/linux/WT_Codes/openfast_dev/build/glue-codes/openfast/openfast'
-        # FASTpref['FAST_directory']      = '/mnt/c/linux/IS/xloads_tc/templates/openfast/5MW_Land_DLL_WTurb-NoAero'   # Path to fst directory files
-        # FASTpref['FAST_InputFile']      = '5MW_Land_DLL_WTurb.fst' # FAST input file (ext=.fst)
-        # FASTpref['Turbsim_exe']         = '/mnt/c/linux/WT_Codes/TurbSim_v2.00.07a-bjj/TurbSim_glin64'
+        FASTpref['FAST_exe']            = '/Users/rfeil/work/2_OpenFAST/openfast-distributed_aero_control/build/glue-codes/openfast'
+      #  FASTpref['FAST_directory']      = '/Users/rfeil/work/2_OpenFAST/analysis/BAR/OpenFAST_BAR005a'   # Path to fst directory files
+        FASTpref['FAST_directory']      = '/Users/rfeil/work/1_WISDEM/WISDEM/wisdem/rotorse/RotorSE_FAST_BAR_007'   # Path to fst directory files
+        # FASTpref['FAST_InputFile']      = 'RotorSE_FAST_BAR_005a.fst'  # FAST input file (ext=.fst)
+        FASTpref['FAST_InputFile']      = 'RotorSE_FAST_BAR_007.fst'  # FAST input file (ext=.fst)
+        FASTpref['Turbsim_exe']         = "/Users/rfeil/work/5_TurbSim/TurbSim/bin/TurbSim_glin64"
         FASTpref['FAST_namingOut']      = 'RotorSE_FAST_'+ blade['config']['name']
         FASTpref['FAST_runDirectory']   = 'temp/' + FASTpref['FAST_namingOut']
 
         # Run Settings
         FASTpref['cores']               = 1
-        FASTpref['debug_level']         = 2 # verbosity: set to 0 for quiet, 1 & 2 for increasing levels of output
+        FASTpref['debug_level']         = 2  # verbosity: set to 0 for quiet, 1 & 2 for increasing levels of output
 
-        # DLCs
+        # DLCs - design load case
         FASTpref['DLC_gust']            = None      # Max deflection
         # FASTpref['DLC_gust']            = RotorSE_DLC_1_4_Rated       # Max deflection    ### Not in place yet
         FASTpref['DLC_extrm']           = None      # Max strain
@@ -378,12 +372,13 @@ if __name__ == '__main__':
     # rotor['sparT_in'] = np.array([0.00047, 0.00059925, 0.07363709, 0.13907431, 0.19551095, 0.03357394, 0.12021584, 0.00047])
     # rotor['r_in']     = np.array([0., 0.02565783, 0.23892874, 0.39114299, 0.54335725, 0.6955715, 0.84778575, 1.])
 
+
     # === run and outputs ===
     tt = time.time()
     rotor.run_driver()
     #rotor.check_partials(compact_print=True, step=1e-6, form='central')
 
-    # refBlade.write_ontology(fname_output, rotor['blade_out'], refBlade.wt_ref)
+    refBlade.write_ontology(fname_output, rotor['blade_out'], refBlade.wt_ref)
 
     print('Run Time = ',                time.time()-tt)
     print('AEP =',                      rotor['AEP'])
@@ -430,8 +425,8 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     plt.figure()
     plt.plot(rotor['V'], rotor['P']/1e6)
-    plt.xlabel('wind speed (m/s)')
-    plt.xlabel('power (W)')
+    plt.xlabel('wind speed, m/s')
+    plt.ylabel('power, W')
 
     plt.figure()
 
@@ -439,8 +434,9 @@ if __name__ == '__main__':
     plt.plot(rotor['r'], rotor['strainL_spar'], label='pressure')
     plt.plot(rotor['r'], rotor['eps_crit_spar'], label='critical')
     plt.ylim([-5e-3, 5e-3])
-    plt.xlabel('r')
+    plt.xlabel('r, m')
     plt.ylabel('strain')
+    plt.title('spar strain')
     plt.legend()
 
     plt.figure()
@@ -449,13 +445,14 @@ if __name__ == '__main__':
     plt.plot(rotor['r'], rotor['strainL_te'], label='pressure')
     plt.plot(rotor['r'], rotor['eps_crit_te'], label='critical')
     plt.ylim([-5e-3, 5e-3])
-    plt.xlabel('r')
+    plt.xlabel('r, m')
     plt.ylabel('strain')
+    plt.title('trailing edge strain')
     plt.legend()
 
     plt.figure()
     plt.plot(rotor['r'], rotor['rthick'], label='airfoil relative thickness')
-    plt.xlabel('r')
+    plt.xlabel('r, m')
     plt.ylabel('rthick')
     plt.legend()
 
@@ -479,8 +476,6 @@ if __name__ == '__main__':
         # file.write('\n')
 
         # file.write('\n# Power coefficient\n\n')
-
-
 
         # for i in range(n_U):
             # for j in range(n_tsr):

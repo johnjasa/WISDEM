@@ -946,8 +946,8 @@ class InputReader_OpenFAST(InputReader_Common):
 
         f.close()
 
-        self.read_AeroDyn15Blade()
-        self.read_AeroDyn15Polar()
+        self.read_AeroDyn15Blade() # read original blade data
+        self.read_AeroDyn15Polar() # read original airfoil data (no XFoil adaptions conducted, e.g. accounting for flaps)
 
     def read_AeroDyn15Blade(self):
         # AeroDyn v5.00 Blade Definition File
@@ -1010,7 +1010,7 @@ class InputReader_OpenFAST(InputReader_Common):
 
             for tab in range(polar['NumTabs']): # For multiple tables
                 polar['Re']             = float_read(readline_filterComments(f).split()[0])
-                polar['Ctrl']           = int_read(readline_filterComments(f).split()[0])
+                polar['Ctrl']           = float_read(readline_filterComments(f).split()[0])
                 polar['InclUAdata']     = bool_read(readline_filterComments(f).split()[0])
 
                 # Unsteady Aero Data

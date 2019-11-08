@@ -640,6 +640,7 @@ class ReferenceBlade(object):
                 # if i in trans_correct_idx:
                 blade['profile'][:,:,i] = trailing_edge_smoothing(blade['profile'][:,:,i])
 
+
             # Use CCAirfoil.af_flap_coords() (which calls Xfoil) to create AF coordinates with flaps at angles specified in yaml input file
 
             if 'aerodynamic_control' in blade: # Checks if this section is included in yaml file
@@ -703,7 +704,7 @@ class ReferenceBlade(object):
         n_aoa     = len(alpha)
         n_span    = self.NPTS
 
-        Re   = sorted(list(set(np.concatenate([[polar['re'] for polar in AFref[afi]['polars']] for afi in AFref]))))
+        Re   = sorted(list(set(np.concatenate([[polar['re'] for polar in AFref[afi]['polars']] for afi in AFref]))))  # Re vom yaml input files
         # Re   = list(set(np.concatenate([[polar['re'] for polar in AFref[afi]['polars']] for afi in AFref])))  # not sorting in order to only determine airfoil specific polar tables with default Re
         n_Re = len(Re)
 
@@ -765,6 +766,8 @@ class ReferenceBlade(object):
         cd = np.zeros((n_aoa, n_span, n_Re, n_ctrl))
         cm = np.zeros((n_aoa, n_span, n_Re, n_ctrl))
         fa_control = np.zeros((n_span, n_Re, n_ctrl))
+        Re_loc = np.zeros((n_span, n_Re, n_ctrl))
+        Ma_loc = np.zeros((n_span, n_Re, n_ctrl))
         for j in range(n_Re):
             spline_cl = spline(thk_afref, cl_ref[:,:,j], axis=1)
             spline_cd = spline(thk_afref, cd_ref[:,:,j], axis=1)
@@ -794,18 +797,18 @@ class ReferenceBlade(object):
                             maxTS = blade['assembly']['control']['maxTS']  # max blade-tip speed (m/s) from yaml file
                             KinVisc = blade['environment']['air_data']['KinVisc']  # Kinematic viscosity (m^2/s) from yaml file
                             SpdSound = blade['environment']['air_data']['SpdSound'] # speed of sound (m/s) from yaml file
-                            Re_loc = c*maxTS*rR/KinVisc
-                            Ma_loc = maxTS * rR / SpdSound
+                            Re_loc[afi,j,ind] = c*maxTS*rR/KinVisc
+                            Ma_loc[afi,j,ind] = maxTS * rR / SpdSound
 
                             # print('Run xfoil for span section at ' + str(eta*100.) + '%, flap deflection ' + str(fa) + ' deg, and Re equal to ' + str(Re[j]))
                             # print('Run xfoil for span section at ' + str(eta * 100.) + '%, flap deflection ' + str(fa_control[afi,j,ind]) + ' deg, and Re equal to ' + str(Re[j]))
-                            print('Run xfoil for span section at ' + str(rR * 100.) + '% with ' + str(fa_control[afi,j,ind]) + ' deg flap deflection angle; Re equal to ' + str(Re_loc) + '; Ma equal to ' + str(Ma_loc))
-                            data = self.runXfoil(blade['flap_profiles'][afi]['coords'][:,0,ind], blade['flap_profiles'][afi]['coords'][:,1,ind], Re_loc, -20., 25., 0.5, Ma_loc)
+                            print('Run xfoil for span section at ' + str(rR * 100.) + '% with ' + str(fa_control[afi,j,ind]) + ' deg flap deflection angle; Re equal to ' + str(Re_loc[afi,j,ind]) + '; Ma equal to ' + str(Ma_loc[afi,j,ind]))
+                            data = self.runXfoil(blade['flap_profiles'][afi]['coords'][:,0,ind], blade['flap_profiles'][afi]['coords'][:,1,ind], Re_loc[afi,j,ind], -20., 25., 0.5, Ma_loc[afi,j,ind])
                             # data = self.runXfoil(blade['flap_profiles'][afi]['coords'][:,0,ind], blade['flap_profiles'][afi]['coords'][:,1,ind], Re[j])
                             # data[data[:,0].argsort()] # To sort data by increasing aoa
                             # Apply corrections to airfoil polars
                             # oldpolar= Polar(Re[j], data[:,0],data[:,1],data[:,2],data[:,4]) # p[:,0] is alpha, p[:,1] is Cl, p[:,2] is Cd, p[:,4] is Cm
-                            oldpolar= Polar(Re_loc, data[:,0],data[:,1],data[:,2],data[:,4]) # p[:,0] is alpha, p[:,1] is Cl, p[:,2] is Cd, p[:,4] is Cm
+                            oldpolar= Polar(Re_loc[afi,j,ind], data[:,0],data[:,1],data[:,2],data[:,4]) # p[:,0] is alpha, p[:,1] is Cl, p[:,2] is Cd, p[:,4] is Cm
 
 
                             polar3d = oldpolar.correction3D(rR,c/R,tsr) # Apply 3D corrections (made sure to change the r/R, c/R, and tsr values appropriately when calling AFcorrections())
@@ -840,6 +843,8 @@ class ReferenceBlade(object):
         blade['airfoils_Re']  = Re
         #blade['airfoils_Ctrl']  = fa
         blade['airfoils_Ctrl']  = fa_control # use vector of flap angle controls
+        blade['Re_loc'] = Re_loc
+        blade['Ma_loc'] = Ma_loc
 
         return blade
 
@@ -964,7 +969,9 @@ class ReferenceBlade(object):
             else:
                 numNodes += 50 # Re-run with additional panels
                 runNum += 1 # Update run number
-                print('Refining paneling')
+                if numNodes > 480:
+                    Warning('NO convergence in XFoil achieved!')
+                print('Refining paneling to ' + str(numNodes) + ' nodes')
 
         # Load back in polar data to be saved in instance variables
         #flap_polar = np.loadtxt(saveFlnmPolar,skiprows=12) # (note, we are assuming raw Xfoil polars when skipping the first 12 lines)

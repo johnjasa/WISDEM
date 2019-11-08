@@ -398,6 +398,7 @@ AeroDynPolar['cd']          = []    #coefficient of drag
 AeroDynPolar['cm']          = []    #coefficient of the pitching moment
 
 AeroDynPolar['Re']          = 0.0
+AeroDynPolar['Ma']          = 0.0
 AeroDynPolar['Ctrl']        = 0.0
 AeroDynPolar['InclUAdata']  = 0.0
 AeroDynPolar['alpha0']      = 0.0

@@ -24,7 +24,7 @@ if MPI:
 
 
 
-def eval_unsteady(alpha, cl, cd, cm, Ctrl):
+def eval_unsteady(alpha, cl, cd, cm):
     # calculate unsteady coefficients from polars for OpenFAST's Aerodyn
 
     unsteady = {}
@@ -151,7 +151,6 @@ def eval_unsteady(alpha, cl, cd, cm, Ctrl):
     unsteady['Cd']    = cd
     unsteady['Cm']    = cm
 
-    unsteady['Ctrl']  = Ctrl
 
     return unsteady
 
@@ -247,6 +246,8 @@ class FASTLoadCases(ExplicitComponent):
         self.add_input('airfoils_cm',       val=np.zeros((n_aoa_grid, NPTS, n_Re_grid, n_ctrl)), desc='moment coefficients, spanwise')
         self.add_input('airfoils_aoa',      val=np.zeros((n_aoa_grid)), units='deg', desc='angle of attack grid for polars')
         self.add_input('airfoils_Re',       val=np.zeros((n_Re_grid)), desc='Reynolds numbers of polars')
+        self.add_input('airfoils_Re_loc',       val=np.zeros((NPTS, n_Re_grid, n_ctrl)), desc='Reynolds numbers of polars')
+        self.add_input('airfoils_Ma_loc',       val=np.zeros((NPTS, n_Re_grid, n_ctrl)), desc='Reynolds numbers of polars')
         #self.add_input('airfoils_Ctrl',       val=np.zeros((n_ctrl)), units='deg',desc='Reynolds numbers of polars')
         self.add_input('airfoils_Ctrl',       val=np.zeros((NPTS, n_ctrl)), units='deg',desc='Reynolds numbers of polars')
 
@@ -451,16 +452,19 @@ class FASTLoadCases(ExplicitComponent):
 
             for j in range(tab): # No of tabs; if there are no flaps at this blade station
                 #unsteady = eval_unsteady(inputs['airfoils_aoa'], inputs['airfoils_cl'][:,i,0,j], inputs['airfoils_cd'][:,i,0,j], print(inputs['airfoils_cm'][:,i,0,j])
-                unsteady = eval_unsteady(inputs['airfoils_aoa'], inputs['airfoils_cl'][:,i,0,j], inputs['airfoils_cd'][:,i,0,j], inputs['airfoils_cm'][:,i,0,j], inputs['airfoils_Ctrl'][i][j])
+                unsteady = eval_unsteady(inputs['airfoils_aoa'], inputs['airfoils_cl'][:,i,0,j], inputs['airfoils_cd'][:,i,0,j], inputs['airfoils_cm'][:,i,0,j])
                 fst_vt['AeroDyn15']['af_data'][i].append({})
-                
+
+
                 fst_vt['AeroDyn15']['af_data'][i][j]['InterpOrd'] = "DEFAULT"
                 fst_vt['AeroDyn15']['af_data'][i][j]['NonDimArea']= 1
                 fst_vt['AeroDyn15']['af_data'][i][j]['NumCoords'] = 0          # TODO: link the airfoil profiles to this component and write the coordinate files (no need as of yet)
                 fst_vt['AeroDyn15']['af_data'][i][j]['NumTabs']   = tab
-                fst_vt['AeroDyn15']['af_data'][i][j]['Re']        = 0.75       # TODO: functionality for multiple Re tables
-                #fst_vt['AeroDyn15']['af_data'][i][j]['Ctrl']      = inputs['airfoils_Ctrl']
-                fst_vt['AeroDyn15']['af_data'][i][j]['Ctrl'] = unsteady['Ctrl'] # added to unsteady function for variable flap controls at airfoils
+                if inputs['airfoils_Re_loc'][i][0][j] == 0:  # check if Re ws locally determined (e.g. for trailing edge flaps)
+                    fst_vt['AeroDyn15']['af_data'][i][j]['Re']        =  0.75       # TODO: functionality for multiple Re tables
+                else:
+                    fst_vt['AeroDyn15']['af_data'][i][j]['Re'] = inputs['airfoils_Re_loc'][i][0][j]/1000000  # give in millions
+                fst_vt['AeroDyn15']['af_data'][i][j]['Ctrl'] = inputs['airfoils_Ctrl'][i][j]  # unsteady['Ctrl'] # added to unsteady function for variable flap controls at airfoils
 
                 fst_vt['AeroDyn15']['af_data'][i][j]['InclUAdata']= "True"
                 fst_vt['AeroDyn15']['af_data'][i][j]['alpha0']    = unsteady['alpha0']

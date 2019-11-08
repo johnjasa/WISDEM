@@ -82,7 +82,9 @@ class BladeGeometry(ExplicitComponent):
         self.add_output('airfoils_cd',  val=np.zeros((NAFgrid, npts, NRe, n_ctrl)), desc='drag coefficients, spanwise')
         self.add_output('airfoils_cm',  val=np.zeros((NAFgrid, npts, NRe, n_ctrl)), desc='moment coefficients, spanwise')
         self.add_output('airfoils_aoa', val=np.zeros((NAFgrid)), units='deg', desc='angle of attack grid for polars')
-        self.add_output('airfoils_Re',  val=np.zeros((NRe)), desc='Reynolds numbers of polars')
+        self.add_output('airfoils_Re',  val=np.zeros((NRe)), desc='Reynolds numbers of polars from Yaml file')
+        self.add_output('airfoils_Re_loc', val=np.zeros((npts, NRe, n_ctrl)), desc='local Reynolds number')
+        self.add_output('airfoils_Ma_loc', val=np.zeros((npts, NRe, n_ctrl)), desc='local Mach number')
         #self.add_output('airfoils_Ctrl', val=np.zeros((n_ctrl)), units='deg', desc='flap control')
         self.add_output('airfoils_Ctrl', val=np.zeros((npts, n_ctrl)), units='deg', desc='flap control')
         
@@ -180,10 +182,6 @@ class BladeGeometry(ExplicitComponent):
             refBlade.te_var     = blade['precomp']['te_var']
 
 
-
-        # assembly = copy.deepcopy(self.refBlade['assembly'])
-        # environment = copy.deepcopy(self.wt_ref['environment'])
-
         blade_out = refBlade.update(blade)
 
         # Get geometric outputs
@@ -205,6 +203,8 @@ class BladeGeometry(ExplicitComponent):
         outputs['airfoils_cm']  = blade_out['airfoils_cm']
         outputs['airfoils_aoa'] = blade_out['airfoils_aoa']
         outputs['airfoils_Re']  = blade_out['airfoils_Re']
+        outputs['airfoils_Re_loc']  = blade_out['Re_loc']
+        outputs['airfoils_Ma_loc']  = blade_out['Ma_loc']
       #  outputs['airfoils_Ctrl'] = print(blade_out['flap_profiles'])   ['te_flaps']
       #  for k in range(len(blade['aerodynamic_control']['te_flaps'])):  # for multiple flaps specified in yaml file
       #      if (blade['pf']['r'][i] / blade['pf']['r'][-1]) >= blade['aerodynamic_control']['te_flaps'][k]['span_start'] and (blade['pf']['r'][i] / blade['pf']['r'][-1]) <= blade['aerodynamic_control']['te_flaps'][k]['span_end']:  # Only create flap geometries where the yaml file specifies there is a flap (Currently going to nearest blade station location)

@@ -277,7 +277,7 @@ if __name__ == '__main__':
 
     # Turbine Ontology input
     fname_schema  = "turbine_inputs/IEAontology_schema.yaml"
-    fname_input   = "turbine_inputs/BAR208_noRe.yaml"
+    fname_input   = "turbine_inputs/BAR209_noRe_new.yaml"
     # fname_input   = "turbine_inputs/BAR007.yaml"
     output_folder = "test/"
     fname_output  = output_folder + 'YAML_out.yaml'

@@ -277,8 +277,8 @@ if __name__ == '__main__':
 
     # Turbine Ontology input
     fname_schema  = "turbine_inputs/IEAontology_schema.yaml"
-    fname_input   = "turbine_inputs/BAR209_noRe_new.yaml"
-    # fname_input   = "turbine_inputs/BAR007.yaml"
+    fname_input   = "turbine_inputs/BAR209n_noRe.yaml"
+    # fname_input   = "turbine_inputs/BAR009n.yaml"
     output_folder = "test/"
     fname_output  = output_folder + 'YAML_out.yaml'
 
@@ -303,11 +303,16 @@ if __name__ == '__main__':
         FASTpref['Analysis_Level']      = Analysis_Level
         FASTpref['FAST_ver']            = 'openfast-distributed_aero_control'
         FASTpref['dev_branch']          = True
+
+        # Baseline BAR input
+        # FASTpref['FAST_exe']            = '/Users/rfeil/work/2_OpenFAST/openfast_BDloads_output/build/glue-codes/openfast'
+        # FASTpref['FAST_directory']      = '/Users/rfeil/work/1_WISDEM/WISDEM/wisdem/rotorse/RotorSE_FAST_BAR_009n'   # Path to fst directory files
+        # FASTpref['FAST_InputFile']      = 'RotorSE_FAST_BAR_009n.fst'  # FAST input file (ext=.fst)
+        # Input with DAC settings (currently same as baseline)
         FASTpref['FAST_exe']            = '/Users/rfeil/work/2_OpenFAST/openfast-distributed_aero_control/build/glue-codes/openfast'
-      #  FASTpref['FAST_directory']      = '/Users/rfeil/work/2_OpenFAST/analysis/BAR/OpenFAST_BAR005a'   # Path to fst directory files
-        FASTpref['FAST_directory']      = '/Users/rfeil/work/1_WISDEM/WISDEM/wisdem/rotorse/RotorSE_FAST_BAR_007'   # Path to fst directory files
-        # FASTpref['FAST_InputFile']      = 'RotorSE_FAST_BAR_005a.fst'  # FAST input file (ext=.fst)
-        FASTpref['FAST_InputFile']      = 'RotorSE_FAST_BAR_007.fst'  # FAST input file (ext=.fst)
+        FASTpref['FAST_directory']      = '/Users/rfeil/work/1_WISDEM/WISDEM/wisdem/rotorse/RotorSE_FAST_BAR_009n'   # Path to fst directory files
+        FASTpref['FAST_InputFile']      = 'RotorSE_FAST_BAR_009n.fst'  # FAST input file (ext=.fst)
+
         FASTpref['Turbsim_exe']         = "/Users/rfeil/work/5_TurbSim/TurbSim/bin/TurbSim_glin64"
         FASTpref['FAST_namingOut']      = 'RotorSE_FAST_'+ blade['config']['name']
         FASTpref['FAST_runDirectory']   = 'temp/' + FASTpref['FAST_namingOut']
@@ -341,7 +346,7 @@ if __name__ == '__main__':
     npts_spline_power_curve = 200       # (Int): number of points to use in fitting spline to power curve
     regulation_reg_II5      = True      # calculate Region 2.5 pitch schedule, False will not maximize power in region 2.5
     regulation_reg_III      = True      # calculate Region 3 pitch schedule, False will return erroneous Thrust, Torque, and Moment for above rated
-    flag_Cp_Ct_Cq_Tables    = True      # Compute Cp-Ct-Cq-Beta-TSR tables
+    flag_Cp_Ct_Cq_Tables    = False      # Compute Cp-Ct-Cq-Beta-TSR tables
     rc_verbosity            = False     # Verbosity flag for the blade cost model
     rc_tex_table            = False     # Flag to generate .tex ready tables from the blade cost model
     rc_generate_plots       = False     # Flag to generate plots in the blade cost model

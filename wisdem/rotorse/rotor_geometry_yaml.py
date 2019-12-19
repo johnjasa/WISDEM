@@ -691,8 +691,13 @@ class ReferenceBlade(object):
 
                             blade['flap_profiles'][i]['flap_angles'].append([])
                             blade['flap_profiles'][i]['flap_angles'][ind] = fa # Putting in flap angles to blade for each profile (can be used for debugging later)
+
                         # ** The code below will plot the first three flap deflection profiles (in the case where there are only 3 this will correspond to max negative, zero, and max positive deflection cases)
                         # import matplotlib.pyplot as plt
+                        # font = {'family': 'Times New Roman',
+                        #         'weight': 'normal',
+                        #         'size': 18}
+                        # plt.rc('font', **font)
                         # plt.figure
                         # fig, ax = plt.subplots(1, 1, figsize=(8, 5))
                         # # plt.plot(blade['flap_profiles'][i]['coords'][:,0,0], blade['flap_profiles'][i]['coords'][:,1,0], 'r',blade['flap_profiles'][i]['coords'][:,0,1], blade['flap_profiles'][i]['coords'][:,1,1], 'k',blade['flap_profiles'][i]['coords'][:,0,2], blade['flap_profiles'][i]['coords'][:,1,2], 'b')
@@ -703,9 +708,13 @@ class ReferenceBlade(object):
                         #          blade['flap_profiles'][i]['coords'][:, 0, 1],
                         #          blade['flap_profiles'][i]['coords'][:, 1, 1], 'k')
                         #
+                        # # plt.xlabel('x')
+                        # # plt.ylabel('y')
                         # plt.axis('equal')
+                        # plt.axis('off')
+                        # plt.tight_layout()
                         # plt.show()
-                        # plt.savefig('temp/airfoil_polars/NACA63-618_flap_profiles.png')
+                        # plt.savefig('temp/airfoil_polars/NACA63-618_flap_profiles.png', dpi=300)
 
 
 
@@ -1007,20 +1016,27 @@ class ReferenceBlade(object):
 
                         # ** The code below will plot the three cl polars
                         # import matplotlib.pyplot as plt
+                        # font = {'family': 'Times New Roman',
+                        #         'weight': 'normal',
+                        #         'size': 18}
+                        # plt.rc('font', **font)
                         # plt.figure
                         # fig, ax = plt.subplots(1, 1, figsize=(8, 5))
                         # plt.plot(np.degrees(alpha), cl[:,afi,j,0],'r', label='$\delta_{flap}$ = -10 deg')  # -10
                         # plt.plot(np.degrees(alpha), cl[:,afi,j,1],'k', label='$\delta_{flap}$ = 0 deg')  # 0
-                        # plt.plot(np.degrees(alpha), cl[:,afi,j,2],'b', label='$\delta_{flap}$ = +10 deg')  # +1
+                        # plt.plot(np.degrees(alpha), cl[:,afi,j,2],'b', label='$\delta_{flap}$ = +10 deg')  # +10
                         # plt.xlim(xmin=-15, xmax=15)
                         # plt.ylim(ymin=-1.7, ymax=2.2)
                         # plt.grid(True)
                         # # autoscale_y(ax)
                         # plt.xlabel('Angles of attack, deg')
                         # plt.ylabel('Lift coefficient')
-                        # plt.legend(loc='upper left')
+                        # plt.legend(loc='lower right')
+                        # plt.tight_layout()
                         # plt.show()
-                        # plt.savefig('temp/airfoil_polars/NACA63-618_cl_flaps.png')
+                        # # plt.savefig('temp/airfoil_polars/NACA63-618_cl_flaps.png', dpi=300)
+
+
 
         alpha_out = np.degrees(alpha)
         if alpha[0] != -180.:

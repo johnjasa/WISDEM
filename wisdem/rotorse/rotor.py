@@ -277,8 +277,8 @@ if __name__ == '__main__':
 
     # Turbine Ontology input
     fname_schema  = "turbine_inputs/IEAontology_schema.yaml"
-    fname_input   = "turbine_inputs/BAR209n_noRe.yaml"
-    # fname_input   = "turbine_inputs/BAR009n.yaml"
+    fname_input   = "turbine_inputs/BAR2010n_noRe.yaml"
+    # fname_input   = "turbine_inputs/BAR0010n.yaml"
     output_folder = "test/"
     fname_output  = output_folder + 'YAML_out.yaml'
 
@@ -288,7 +288,7 @@ if __name__ == '__main__':
     refBlade = ReferenceBlade()
     refBlade.verbose      = True
     refBlade.NINPUT       = 8 # no. of control points (def spline distribution; chord, twist, etc.)
-    refBlade.NPTS         = 50
+    refBlade.NPTS         = 99
     refBlade.spar_var     = ['Spar_Cap_SS', 'Spar_Cap_PS'] # SS, then PS
     refBlade.te_var       = 'TE_reinforcement'
     refBlade.validate     = False
@@ -310,8 +310,8 @@ if __name__ == '__main__':
         # FASTpref['FAST_InputFile']      = 'RotorSE_FAST_BAR_009n.fst'  # FAST input file (ext=.fst)
         # Input with DAC settings (currently same as baseline)
         FASTpref['FAST_exe']            = '/Users/rfeil/work/2_OpenFAST/openfast-distributed_aero_control/build/glue-codes/openfast'
-        FASTpref['FAST_directory']      = '/Users/rfeil/work/1_WISDEM/WISDEM/wisdem/rotorse/RotorSE_FAST_BAR_009n'   # Path to fst directory files
-        FASTpref['FAST_InputFile']      = 'RotorSE_FAST_BAR_009n.fst'  # FAST input file (ext=.fst)
+        FASTpref['FAST_directory']      = '/Users/rfeil/work/1_WISDEM/WISDEM/wisdem/rotorse/RotorSE_FAST_BAR_0010n'   # Path to fst directory files
+        FASTpref['FAST_InputFile']      = 'RotorSE_FAST_BAR_0010n.fst'  # FAST input file (ext=.fst)
 
         FASTpref['Turbsim_exe']         = "/Users/rfeil/work/5_TurbSim/TurbSim/bin/TurbSim_glin64"
         FASTpref['FAST_namingOut']      = 'RotorSE_FAST_'+ blade['config']['name']

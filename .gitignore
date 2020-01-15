@@ -111,6 +111,10 @@ wisdem/rotorse/temp/
 wisdem/rotorse/temp/
 wisdem/00_analysis/
 wisdem/rotorse/RotorSE_FAST_BAR_007/
+wisdem/rotorse/RotorSE_FAST_BAR_009n/*
+wisdem/rotorse/RotorSE_FAST_BAR_009n/Airfoils/
+wisdem/rotorse/RotorSE_FAST_BAR_0010n/*
+wisdem/rotorse/RotorSE_FAST_BAR_0010n/Airfoils
 wisdem/rotorse/turbine_inputs/archive/
 NUL
 .idea/

@@ -947,7 +947,7 @@ class InputReader_OpenFAST(InputReader_Common):
         f.close()
 
         self.read_AeroDyn15Blade() # read original blade data
-        self.read_AeroDyn15Polar() # read original airfoil data (no XFoil adaptions conducted, e.g. accounting for flaps)
+        # self.read_AeroDyn15Polar() # read original airfoil data (no XFoil adaptions conducted, e.g. accounting for flaps)
 
     def read_AeroDyn15Blade(self):
         # AeroDyn v5.00 Blade Definition File

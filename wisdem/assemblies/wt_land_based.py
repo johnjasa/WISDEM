@@ -12,7 +12,7 @@ from wisdem.assemblies.parametrize_wt import WT_Parametrize
 from wisdem.rotorse.dac import RunXFOIL
 from wisdem.servose.servose import ServoSE
 from wisdem.rotorse.rotor_elasticity import RotorElasticity
-from wisdem.rotorse.rotor_loads_defl_strains_emg import RotorLoadsDeflStrains
+from wisdem.rotorse.rotor_loads_defl_strains import RotorLoadsDeflStrains
 from wisdem.assemblies.run_tools import Outputs_2_Screen, Convergence_Trends_Opt
 
 class WT_RNTA(Group):

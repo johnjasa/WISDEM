@@ -464,10 +464,10 @@ class BladeFatigue(ExplicitComponent):
         self.n_layers        = n_layers = blade_init_options['n_layers']
         self.FatigueFile     = self.options['analysis_options']['rotorse']['FatigueFile']
 
-        self.te_ss_var       = self.options['opt_options']['blade_struct']['te_ss_var']
-        self.te_ps_var       = self.options['opt_options']['blade_struct']['te_ps_var']
-        self.spar_cap_ss_var = self.options['opt_options']['blade_struct']['spar_cap_ss_var']
-        self.spar_cap_ps_var = self.options['opt_options']['blade_struct']['spar_cap_ps_var']
+        self.te_ss_var       = self.options['opt_options']['optimization_variables']['blade']['structure']['te_ss']['name']
+        self.te_ps_var       = self.options['opt_options']['optimization_variables']['blade']['structure']['te_ps']['name']
+        self.spar_cap_ss_var = self.options['opt_options']['optimization_variables']['blade']['structure']['spar_cap_ss']['name']
+        self.spar_cap_ps_var = self.options['opt_options']['optimization_variables']['blade']['structure']['spar_cap_ps']['name']
 
         self.add_input('r',            val=np.zeros(n_span), units='m',      desc='radial locations where blade is defined (should be increasing and not go all the way to hub or tip)')
         self.add_input('chord',        val=np.zeros(n_span), units='m',      desc='chord length at each section')
@@ -477,8 +477,8 @@ class BladeFatigue(ExplicitComponent):
         self.add_input('gamma_f',      val=1.35,                             desc='safety factor on loads')
         self.add_input('gamma_m',      val=1.1,                              desc='safety factor on materials')
         self.add_input('E',            val=np.zeros([n_mat, 3]), units='Pa', desc='2D array of the Youngs moduli of the materials. Each row represents a material, the three columns represent E11, E22 and E33.')
-        self.add_input('Xt',           val=np.zeros([n_mat, 3]),             desc='2D array of the Ultimate Tensile Strength (UTS) of the materials. Each row represents a material, the three columns represent Xt12, Xt13 and Xt23.')
-        self.add_input('Xc',           val=np.zeros([n_mat, 3]),             desc='2D array of the Ultimate Compressive Strength (UCS) of the materials. Each row represents a material, the three columns represent Xc12, Xc13 and Xc23.')
+        self.add_input('Xt',           val=np.zeros([n_mat, 3]), units='Pa', desc='2D array of the Ultimate Tensile Strength (UTS) of the materials. Each row represents a material, the three columns represent Xt12, Xt13 and Xt23.')
+        self.add_input('Xc',           val=np.zeros([n_mat, 3]), units='Pa', desc='2D array of the Ultimate Compressive Strength (UCS) of the materials. Each row represents a material, the three columns represent Xc12, Xc13 and Xc23.')
         self.add_input('m',            val=np.zeros([n_mat]),                desc='2D array of the S-N fatigue slope exponent for the materials') 
 
         self.add_input('x_tc',         val=np.zeros(n_span), units='m',      desc='x-distance to the neutral axis (torsion center)')

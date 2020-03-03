@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import yaml
+
 try:
     import ruamel_yaml as ry
 except:
@@ -109,3 +110,4 @@ def select_cases(cases, var_sel, val_sel):
 
     case_idx = [i for i, x in enumerate(truth) if x]
     return case_idx
+

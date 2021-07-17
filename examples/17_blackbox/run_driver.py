@@ -66,8 +66,11 @@ def run_wisdem_tower_design(tower_height, base_thickness, top_thickness, top_dia
 
     # Grab and return the LCOE
     LCOE = wt.get_val("financese.lcoe", units="USD/(MW*h)")[0]
+    AEP = wt.get_val("rotorse.rp.AEP", units="MW*h")[0]
 
-    return LCOE
+    cost = LCOE * AEP
+
+    return cost
 
 
 # Nominal values for the OC3 spar
@@ -76,8 +79,8 @@ top_thickness = 0.019  # meters
 base_thickness = 0.027  # meters
 top_diameter = 3.87  # meters
 
-LCOE = run_wisdem_tower_design(tower_height, base_thickness, top_thickness, top_diameter)
-print("LCOE:", LCOE, "USD/MWh")
+cost = run_wisdem_tower_design(tower_height, base_thickness, top_thickness, top_diameter)
+print("Cost:", cost, "USD")
 
 # Example: use less tower materials by decreasing the thicknesses and top diameter,
 # leading to a lower LCOE.
@@ -86,5 +89,5 @@ top_thickness = 0.01  # meters
 base_thickness = 0.02  # meters
 top_diameter = 3.0  # meters
 
-LCOE = run_wisdem_tower_design(tower_height, base_thickness, top_thickness, top_diameter)
-print("LCOE:", LCOE, "USD/MWh")
+cost = run_wisdem_tower_design(tower_height, base_thickness, top_thickness, top_diameter)
+print("Cost:", cost, "USD")
